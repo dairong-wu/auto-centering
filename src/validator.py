@@ -113,7 +113,7 @@ class SkyWaterBSIM4Centering:
     def generate_testbench_netlist(self, params: BSIM4Parameters, spec: BSIM4TargetSpec) -> str:
         # calculate constant current threshold
         threshold_current = 140e-9 * (spec.width / spec.length)
-        print(f"DEBUG: Constant current threshold = 140nA * W/L = {threshold_current:.2e}A")
+        #print(f"DEBUG: Constant current threshold = 140nA * W/L = {threshold_current:.2e}A")
         
         # copy model files to temp
         temp_model_file = os.path.join(self.temp_dir, "models.lib")
@@ -132,12 +132,12 @@ class SkyWaterBSIM4Centering:
         with open(temp_model_file, 'w') as f:
             f.write(updated_content)
         
-        print(f"DEBUG: Created model file: {temp_model_file}")
+        #print(f"DEBUG: Created model file: {temp_model_file}")
         
         netlist_content = self.create_netlist_content(spec, threshold_current)
         
-        print("DEBUG: Generated netlist:")
-        print(netlist_content)
+        #print("DEBUG: Generated netlist:")
+        #print(netlist_content)
         
         return netlist_content
     
@@ -167,20 +167,13 @@ class SkyWaterBSIM4Centering:
         lines.append("")
         lines.append("* Find Vth where Id > threshold")
         lines.append(f"let threshold = {threshold_current}")
-        lines.append("let vth_extracted = 0.45")
+        lines.append("let id_current = abs(i(Vds1))")
+        lines.append("let vth_extracted = 0.35")
         lines.append("")
-        lines.append("* Simple Vth search")
-        lines.append("let current_vector = abs(i(Vds1))")
-        lines.append("let voltage_vector = Vgs1")
-        lines.append("let n_points = length(current_vector)")
-        lines.append("")
-        lines.append("* Find first point where current > threshold")
-        lines.append("loop idx 0 n_points-1")
-        lines.append("  if current_vector[idx] > threshold")
-        lines.append("    let vth_extracted = voltage_vector[idx]")
-        lines.append("    break")
-        lines.append("  end")
-        lines.append("end")
+        lines.append("* Use meas for vth extraction")
+        lines.append("meas dc vth_temp when id_current=threshold")
+        lines.append("let vth_extracted = $&vth_temp")
+        lines.append("echo $&vth_extracted > vth_result.txt")
         lines.append("")
         lines.append("* Ion measurement")
         lines.append("op")
@@ -188,8 +181,6 @@ class SkyWaterBSIM4Centering:
         lines.append(f"let width_microns = {spec.width * 1e6}")
         lines.append("let ion_normalized = ion_current / width_microns")
         lines.append("")
-        lines.append("* Write results using echo (verified working)")
-        lines.append("echo $&vth_extracted > vth_result.txt")
         lines.append("echo $&ion_normalized > ion_result.txt")
         lines.append("")
         lines.append("* Debug output")
@@ -211,22 +202,22 @@ class SkyWaterBSIM4Centering:
         with open(netlist_file, 'w') as f:
             f.write(netlist)
         
-        print(f"DEBUG: Netlist file: {netlist_file}")
+        #print(f"DEBUG: Netlist file: {netlist_file}")
         
         try:
             cmd = ["ngspice", "-b", netlist_file]
             result = subprocess.run(cmd, capture_output=True, text=True, 
                                   cwd=self.temp_dir, timeout=30)
             
-            print(f"DEBUG: ngspice return code: {result.returncode}")
-            print(f"DEBUG: ngspice stdout: {result.stdout}")
+            #print(f"DEBUG: ngspice return code: {result.returncode}")
+            #print(f"DEBUG: ngspice stdout: {result.stdout}")
             if result.stderr:
                 print(f"DEBUG: ngspice stderr: {result.stderr}")
             
             vth_file = os.path.join(self.temp_dir, "vth_result.txt")
             ion_file = os.path.join(self.temp_dir, "ion_result.txt")
-            print(f"DEBUG: vth_result.txt exists: {os.path.exists(vth_file)}")
-            print(f"DEBUG: ion_result.txt exists: {os.path.exists(ion_file)}")
+            #print(f"DEBUG: vth_result.txt exists: {os.path.exists(vth_file)}")
+            #print(f"DEBUG: ion_result.txt exists: {os.path.exists(ion_file)}")
             
             if result.returncode != 0:
                 print(f"Simulation error: {result.stderr}")
@@ -249,13 +240,13 @@ class SkyWaterBSIM4Centering:
             if os.path.exists(vth_file):
                 with open(vth_file, 'r') as f:
                     vth_content = f.read().strip()
-                    print(f"DEBUG: vth_result.txt content: '{vth_content}'")
+                    #print(f"DEBUG: vth_result.txt content: '{vth_content}'")
                     if vth_content and vth_content != '':
                         try:
                             results['vth'] = float(vth_content)
                         except ValueError:
                             print(f"WARNING: Could not convert vth '{vth_content}' to float")
-                            results['vth'] = 0.45
+                            results['vth'] = 0.35
                     else:
                         print("WARNING: Vth result is empty, using default 0.35")
                         results['vth'] = 0.35
@@ -264,7 +255,7 @@ class SkyWaterBSIM4Centering:
             if os.path.exists(ion_file):
                 with open(ion_file, 'r') as f:
                     ion_content = f.read().strip()
-                    print(f"DEBUG: ion_result.txt content: '{ion_content}'")
+                    #print(f"DEBUG: ion_result.txt content: '{ion_content}'")
                     if ion_content and ion_content != '':
                         try:
                             results['ion'] = float(ion_content)
@@ -275,7 +266,7 @@ class SkyWaterBSIM4Centering:
         except Exception as e:
             print(f"Error parsing results: {e}")
         
-        print(f"DEBUG: Final parsed results: vth={results['vth']}, ion={results['ion']}")
+        #print(f"DEBUG: Final parsed results: vth={results['vth']}, ion={results['ion']}")
         return results
     
     def calculate_error(self, current_specs: Dict[str, float], target_spec: BSIM4TargetSpec) -> float:
@@ -311,6 +302,8 @@ class SkyWaterBSIM4Centering:
                 continue
             
             error = self.calculate_error(current_specs, target_spec)
+            vth_error = abs((current_specs['vth'] - target_spec.vth) / target_spec.vth) * 100
+            ion_error = abs((current_specs['ion'] - target_spec.ion) / target_spec.ion) * 100
             
             if error < best_error:
                 best_error = error
@@ -329,10 +322,10 @@ class SkyWaterBSIM4Centering:
             }
             self.iteration_log.append(log_entry)
             
-            print(f"Current: Vth={current_specs['vth']:.3f}V, Ion={current_specs['ion']:.2e}A/um")
-            print(f"Error: {error:.4f} (Best: {best_error:.4f})")
+            print(f"Current: Vth={current_specs['vth']:.3f}V ({vth_error:.1f}% error), Ion={current_specs['ion']:.2e}A/um ({ion_error:.1f}% error)")
+            print(f"Overall Error: {error:.4f} (Best: {best_error:.4f})")
             
-            if error < 0.15:
+            if error < 0.05:
                 print("✅ Converged!")
                 return True
             
@@ -410,7 +403,7 @@ class SkyWaterBSIM4Centering:
     def generate_centering_report(self) -> str:
         if not self.iteration_log:
             return "No optimization performed"
-        
+
         report = []
         report.append("=" * 70)
         report.append("SkyWater BSIM4 Auto-Centering Report")
@@ -420,19 +413,29 @@ class SkyWaterBSIM4Centering:
         report.append(f"Device Model: {self.device_model}")
         report.append(f"Date: {__import__('datetime').datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
         report.append("")
-        
+
         if self.target_spec:
             final_log = self.iteration_log[-1]
             final_specs = final_log['specs']
-            
+
+            # calculate vth and ion error
+            vth_error = abs((final_specs['vth'] - self.target_spec.vth) / self.target_spec.vth) * 100
+            vth_error_mv = 1000*abs(final_specs['vth'] - self.target_spec.vth)
+            ion_error = abs((final_specs['ion'] - self.target_spec.ion) / self.target_spec.ion) * 100
+
             report.append("Centering Results:")
             report.append(f"  Target Vth: {self.target_spec.vth:.3f} V")
             report.append(f"  Final Vth:  {final_specs['vth']:.3f} V")
+            report.append(f"  Vth Error:  {vth_error:.2f}%")
+            report.append(f"  Vth Error(mV):  {vth_error_mv:.2f}mV")
+            report.append("")
             report.append(f"  Target Ion: {self.target_spec.ion:.2e} A/um")
             report.append(f"  Final Ion:  {final_specs['ion']:.2e} A/um")
-            report.append(f"  Final Error: {final_log['error']:.4f}")
+            report.append(f"  Ion Error:  {ion_error:.2f}%")
             report.append("")
-        
+            report.append(f"  Overall Error: {final_log['error']:.4f}")
+            report.append("")
+
         initial_params = self.iteration_log[0]['params']
         final_params = self.iteration_log[-1]['params']
         report.append("Parameter Changes:")
@@ -441,7 +444,7 @@ class SkyWaterBSIM4Centering:
             final = final_params[param]
             change = ((final - initial) / initial) * 100 if initial != 0 else 0
             report.append(f"  {param}: {initial:.3e} → {final:.3e} ({change:+.1f}%)")
-        
+
         return "\n".join(report)
     
     def __del__(self):
@@ -465,19 +468,25 @@ if __name__ == "__main__":
         exit(1)
     
     centering_tool.extract_nominal_parameters()
+
+    vth_spec = float(input("Vth Spec(V):"))
+    ion_spec = float(input("Ion(Idsat) Spec(A/um):"))
+    l_spec = float(input("Target Device Length(m):"))
+    w_spec = float(input("Target Device Width(m):"))
+    iteration_user = int(input("Iteration Numbers:"))
     
     target = BSIM4TargetSpec(
-        vth=0.4,       # 400mV target
-        ion=500e-6,    # 500uA/um target
+        vth=vth_spec,       # 400mV target
+        ion=ion_spec,    # 500uA/um target
         vdd=1.8,
-        length=0.15e-6, # 150nm
-        width=1e-6     # 1um
+        length=l_spec, # 150nm
+        width=w_spec     # 1um
     )
     
     print(f"Target: Vth={target.vth}V, Ion={target.ion:.0e}A/um")
     print(f"Constant Current Threshold = 140nA * {target.width*1e6:.0f}um/{target.length*1e6:.0f}nm = {140e-9 * target.width/target.length:.2e}A")
     
-    success = centering_tool.optimize_parameters(target, max_iterations=10)
+    success = centering_tool.optimize_parameters(target, max_iterations=iteration_user)
     
     if success:
         output_file = centering_tool.save_centered_model()
