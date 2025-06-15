@@ -1,5 +1,5 @@
 # BSIM4 SkyWater PDK Auto-Centering Tool
-# 使用Constant Current方法提取Vth: Id > 140nA * W/L
+# Constant Current is used for Vth: Id > 140nA * W/L
 
 import re
 import os
@@ -111,16 +111,16 @@ class SkyWaterBSIM4Centering:
             return BSIM4Parameters()
     
     def generate_testbench_netlist(self, params: BSIM4Parameters, spec: BSIM4TargetSpec) -> str:
-        # 計算constant current threshold
+        # calculate constant current threshold
         threshold_current = 140e-9 * (spec.width / spec.length)
         print(f"DEBUG: Constant current threshold = 140nA * W/L = {threshold_current:.2e}A")
         
-        # 複製模型文件到temp目錄
+        # copy model files to temp
         temp_model_file = os.path.join(self.temp_dir, "models.lib")
         with open(self.model_lib_file, 'r') as f:
             original_content = f.read()
         
-        # 更新模型中的參數
+        # update model parameters
         updated_content = original_content
         updated_content = re.sub(r'vth0=([-+]?\d*\.?\d+([eE][-+]?\d+)?)', 
                                 f'vth0={params.vth0:.6e}', updated_content)
@@ -134,7 +134,6 @@ class SkyWaterBSIM4Centering:
         
         print(f"DEBUG: Created model file: {temp_model_file}")
         
-        # 生成netlist內容
         netlist_content = self.create_netlist_content(spec, threshold_current)
         
         print("DEBUG: Generated netlist:")
@@ -349,7 +348,7 @@ class SkyWaterBSIM4Centering:
                                     target_spec: BSIM4TargetSpec, iteration: int):
         lr = 0.3 * (0.9 ** iteration)
 
-        # Vth調整：vth0直接影響Vth (保持不變)
+        # adjust vth
         vth_error = (target_spec.vth - current_specs['vth']) / target_spec.vth
         if abs(vth_error) > 0.02:
             delta_vth0 = vth_error * lr
@@ -357,10 +356,10 @@ class SkyWaterBSIM4Centering:
             self.current_params.vth0 = max(0.1, min(0.8, new_vth0))
             print(f"  Vth adjustment: vth0 → {self.current_params.vth0:.3f}")
 
-        # Ion調整：同時調整u0和vsat (新增)
+        # adjust ion with u0 and vsat
         ion_error = (target_spec.ion - current_specs['ion']) / target_spec.ion
         if abs(ion_error) > 0.1:
-            # 檢查參數剩餘空間 (智能分配)
+            # check how much headroom for parsmeters, and it will be dissapated
             u0_headroom = (800 - self.current_params.u0) / 800
             vsat_headroom = (3e5 - self.current_params.vsat) / 3e5
 
@@ -370,18 +369,18 @@ class SkyWaterBSIM4Centering:
                 u0_weight = u0_headroom / total_headroom
                 vsat_weight = vsat_headroom / total_headroom
             else:
-                u0_weight = 0.6  # 預設u0佔60%
-                vsat_weight = 0.4  # 預設vsat佔40%
+                u0_weight = 0.6  # default u0 has 60%
+                vsat_weight = 0.4  # vsat has 40%
 
-            # 應用調整
+            # adjust application
             delta_u0 = ion_error * lr * u0_weight * 0.5
             delta_vsat = ion_error * lr * vsat_weight * 0.5
 
-            # 更新u0
+            # update u0
             new_u0 = self.current_params.u0 * (1 + delta_u0)
             self.current_params.u0 = max(50, min(800, new_u0))
 
-            # 更新vsat
+            # update vsat
             new_vsat = self.current_params.vsat * (1 + delta_vsat)
             self.current_params.vsat = max(5e4, min(3e5, new_vsat))
 
@@ -454,7 +453,6 @@ class SkyWaterBSIM4Centering:
             pass
 
 
-# 主程式
 if __name__ == "__main__":
     print("SkyWater BSIM4 Auto-Centering Tool")
     print("Constant Current Method: Id > 140nA * W/L")
