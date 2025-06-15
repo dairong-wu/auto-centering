@@ -1,0 +1,40 @@
+name: SPICE Model Validator CI
+
+# 什麼時候觸發自動測試？
+on:
+  push:
+    branches: [ main ]  # 推送到main分支時
+  pull_request:
+    branches: [ main ]  # 有人提交PR時
+
+jobs:
+  test:
+    runs-on: ubuntu-latest  # 在Ubuntu虛擬機上執行
+    
+    steps:
+    # 步驟1：下載你的代碼
+    - uses: actions/checkout@v3
+    
+    # 步驟2：安裝Python
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: 3.9
+    
+    # 步驟3：安裝依賴
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest
+    
+    # 步驟4：執行測試
+    - name: Run tests
+      run: |
+        pytest tests/
+    
+    # 步驟5：檢查代碼品質
+    - name: Check code style
+      run: |
+        pip install flake8
+        flake8 src tests --max-line-length=88

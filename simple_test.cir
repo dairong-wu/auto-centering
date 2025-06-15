@@ -1,0 +1,16 @@
+* Simple test
+.include skywater_models.lib
+
+M1 d g 0 0 sky130_fd_pr__nfet_01v8 L=0.15u W=1u
+Vg g 0 0.5
+Vd d 0 0.1
+
+.control
+op
+let current = abs(i(Vd))
+print current
+echo $&current > test_result.txt
+wrdata test_result2.txt current
+quit
+.endc
+.end
