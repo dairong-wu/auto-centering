@@ -126,9 +126,9 @@ The tool uses a gradient-based optimization approach with adaptive learning rate
 3. **Convergence issues**: Try increasing the number of iterations
 4. **GUI not starting**: Ensure tkinter is installed (`python -m tkinter`)
 
-## Contributing
+## Comments
 
-Pull requests are welcome! For major changes, please open an issue first to discuss what you would like to change.
+I am quite fresh in coding, so just a personal practice for myself.  Some ideas come from daily work.  Let me know if this is useful!
 
 ## Author
 
