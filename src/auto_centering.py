@@ -346,15 +346,15 @@ class SkyWaterBSIM4Centering:
         if abs(vth_error) > 0.02:
             delta_vth0 = vth_error * lr
             new_vth0 = self.current_params.vth0 + delta_vth0
-            self.current_params.vth0 = max(0.1, min(0.8, new_vth0))
+            self.current_params.vth0 = max(0.1, min(0.9, new_vth0))
             print(f"  Vth adjustment: vth0 → {self.current_params.vth0:.3f}")
 
         # adjust ion with u0 and vsat
         ion_error = (target_spec.ion - current_specs['ion']) / target_spec.ion
         if abs(ion_error) > 0.1:
             # check how much headroom for parsmeters, and it will be dissapated
-            u0_headroom = (800 - self.current_params.u0) / 800
-            vsat_headroom = (3e5 - self.current_params.vsat) / 3e5
+            u0_headroom = (2000 - self.current_params.u0) / 800
+            vsat_headroom = (2.5e7 - self.current_params.vsat) / 3e5
 
             total_headroom = u0_headroom + vsat_headroom
 

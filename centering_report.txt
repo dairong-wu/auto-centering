@@ -4,16 +4,21 @@ SkyWater BSIM4 Auto-Centering Report
 ======================================================================
 Model Library: skywater_models.lib
 Device Model: sky130_fd_pr__nfet_01v8
-Date: 2025-06-15 23:17:09
+Date: 2025-06-16 00:47:13
 
 Centering Results:
-  Target Vth: 0.400 V
-  Final Vth:  0.350 V
-  Target Ion: 5.00e-04 A/um
-  Final Ion:  5.67e-04 A/um
-  Final Error: 0.1299
+  Target Vth: 0.430 V
+  Final Vth:  0.439 V
+  Vth Error:  2.01%
+  Vth Error(mV):  8.63mV
+
+  Target Ion: 6.50e-04 A/um
+  Final Ion:  8.32e-04 A/um
+  Ion Error:  27.93%
+
+  Overall Error: 0.1497
 
 Parameter Changes:
-  vth0: 3.500e-01 ¡ú 5.636e-01 (+61.0%)
-  u0: 4.000e+02 ¡ú 3.178e+02 (-20.5%)
-  vsat: 1.500e+05 ¡ú 1.192e+05 (-20.5%)
+  vth0: 3.500e-01 ¡ú 2.503e-01 (-28.5%)
+  u0: 4.000e+02 ¡ú 2.898e+02 (-27.5%)
+  vsat: 1.500e+05 ¡ú 1.087e+05 (-27.5%)
