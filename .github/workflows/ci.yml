@@ -9,4 +9,4 @@ jobs:
       with:
         python-version: 3.9
     - name: Check syntax
-      run: python -m py_compile src/validator.py
+      run: python -m py_compile src/auto_centering.py
